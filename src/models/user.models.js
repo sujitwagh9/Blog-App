@@ -23,6 +23,7 @@ const userSchema= new Schema({
         enum:['author','admin','reader'],
         default:'reader',
     },
+    refreshTokens: [String],
 },
 {
     timestamps:true,
