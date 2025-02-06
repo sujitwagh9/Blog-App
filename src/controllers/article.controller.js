@@ -6,28 +6,21 @@ import ApiError from "../utils/ApiError.js";
 //controller for createArticle
 
 const createArticle = async (req, res, next) => {
-  const { title, content, tags } = req.body;
-
-  if (!title || !content) {
-    return next(new ApiError(400, "Title and content are required"));
-  }
-
   try {
-    const newArticle = new Article({
-      title,
-      content,
-      author: req.user._id, 
-      tags,
-    });
+    // Automatically assign the logged-in user as the author
+    const articleData = {
+      ...req.body,
+      author: req.user._id // Assuming user._id is available from auth middleware
+    };
 
-    await newArticle.save();
-
+    const article = await Article.create(articleData);
+    
     res.status(201).json({
-      message: "Article created successfully",
-      article: newArticle,
+      success: true,
+      article
     });
   } catch (error) {
-    next(new ApiError(500, "Error while creating article"));
+    next(error);
   }
 };
 
@@ -37,32 +30,19 @@ const createArticle = async (req, res, next) => {
 
 
 const updateArticle = async (req, res, next) => {
-  const { title, content, tags } = req.body;
-  const { id } = req.params;
-
   try {
-    const article = await Article.findById(id);
-
-    if (!article) {
-      return next(new ApiError(404, "Article not found"));
-    }
-
-    if (article.author.toString() !== req.user._id.toString()) {
-      return next(new ApiError(403, "You are not authorized to edit this article"));
-    }
-
-    article.title = title || article.title;
-    article.content = content || article.content;
-    article.tags = tags || article.tags;
-
+    // req.resource is available from isOwnerOrAdmin middleware if you chose to attach it
+    const article = req.resource;
+    
+    Object.assign(article, req.body);
     await article.save();
 
     res.status(200).json({
-      message: "Article updated successfully",
-      article,
+      success: true,
+      article
     });
   } catch (error) {
-    next(new ApiError(500, "Error while updating article"));
+    next(error);
   }
 };
 
@@ -100,17 +80,24 @@ const getAllArticles = async (req, res, next) => {
   try {
     const query = title ? { title: { $regex: title, $options: "i" } } : {};
 
-    const articles = await Article.find(query)
-      .skip((page - 1) * limit)  
-      .limit(Number(limit))      
-      .populate("author", "username email") 
-      .sort({ publishedDate: -1 }); 
+    const [articles, total] = await Promise.all([
+      Article.find(query)
+        .skip((page - 1) * limit)  
+        .limit(Number(limit))      
+        .populate("author", "username email") 
+        .sort({ publishedDate: -1 }),
+      Article.countDocuments(query)
+    ]); 
 
     res.status(200).json({
-      message: "Articles retrieved successfully",
+      success: true,
       articles,
-      page,
-      limit,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
     });
   } catch (error) {
     next(new ApiError(500, "Error while retrieving articles"));
@@ -121,22 +108,13 @@ const getAllArticles = async (req, res, next) => {
 //controller for deletion of Article
 
 const deleteArticle = async (req, res, next) => {
-  const { id } = req.params;
-
   try {
-    const article = await Article.findById(id);
-
-    if (!article) {
-      return next(new ApiError(404, "Article not found"));
-    }
-
-    if (article.author.toString() !== req.user._id.toString()) {
-      return next(new ApiError(403, "You are not authorized to delete this article"));
-    }
-
-    await article.remove();
-
+    // Use req.resource from isOwnerOrAdmin middleware
+    const article = req.resource;
+    await article.deleteOne(); // Using deleteOne() instead of remove() which is deprecated
+    
     res.status(200).json({
+      success: true,
       message: "Article deleted successfully",
     });
   } catch (error) {
@@ -148,23 +126,18 @@ const deleteArticle = async (req, res, next) => {
 //published/unpublished
 
 const togglePublish = async (req, res, next) => {
-  const { id } = req.params;
-
   try {
-    const article = await Article.findById(id);
-
+    const article = await Article.findById(req.params.id);
+    
     if (!article) {
       return next(new ApiError(404, "Article not found"));
-    }
-
-    if (article.author.toString() !== req.user._id.toString()) {
-      return next(new ApiError(403, "You are not authorized to update this article"));
     }
 
     article.isPublished = !article.isPublished;
     await article.save();
 
     res.status(200).json({
+      success: true,
       message: article.isPublished ? "Article published successfully" : "Article unpublished successfully",
       article,
     });
@@ -173,4 +146,22 @@ const togglePublish = async (req, res, next) => {
   }
 };
 
-export { createArticle, updateArticle, getArticle, getAllArticles, deleteArticle, togglePublish };
+const getArticlesByUser = async (req, res, next) => {
+  const { userId } = req.params;
+
+  try {
+    const articles = await Article.find({ author: userId }).populate("author", "username email"); 
+
+    res.status(200).json({
+      message: "Articles retrieved successfully",
+      articles,
+    });
+  } catch (error) { 
+    next(new ApiError(500, "Error while retrieving articles by user"));
+  }
+};
+
+
+
+
+export { createArticle, updateArticle, getArticle, getAllArticles, deleteArticle, togglePublish, getArticlesByUser };
