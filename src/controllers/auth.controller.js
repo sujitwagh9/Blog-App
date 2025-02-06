@@ -232,4 +232,32 @@ const resetPassword = async (req, res, next) => {
 };
 
 
-export { registerUser, loginUser, refreshAccessToken, forgotPassword, resetPassword};
+const verifyEmail = async (req, res, next) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return next(new ApiError(400, "Verification token is required"));
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_VERIFICATION_TOKEN_SECRET);
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return next(new ApiError(404, "User not found"));
+    }
+
+    user.isEmailVerified = true;
+    await user.save();
+
+    res.status(200).json({ message: "Email verified successfully" });
+  } catch (error) {
+    next(new ApiError(500, "Error while verifying email"));
+  }
+};
+
+
+
+
+
+export { registerUser, loginUser, refreshAccessToken, forgotPassword, resetPassword, verifyEmail};
