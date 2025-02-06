@@ -1,26 +1,46 @@
 import express from "express";
-import { createArticle, updateArticle, getArticle, getAllArticles, deleteArticle, togglePublish } from "../controllers/article.controller.js";
-import authenticate from "../middlewares/auth.middleware.js"; 
+import { createArticle, updateArticle, getArticle, getAllArticles, deleteArticle, togglePublish, getArticlesByUser } from "../controllers/article.controller.js";
+import { authenticate, authorize, isAdmin, isOwnerOrAdmin } from "../middlewares/auth.middleware.js";
+import Article from "../models/article.model.js"; // Make sure to import your Article model
 
 const router = express.Router();
 
-
-router.get("/all", getAllArticles);
-
-
+// Public routes
+router.get("/", getAllArticles);
 router.get("/:id", getArticle);
 
+// Protected routes
+router.post("/", 
+  authenticate, 
+  authorize(["admin", "author"]), 
+  createArticle
+);
 
-router.post("/create", authenticate, createArticle);
+router.put("/:id", 
+  authenticate, 
+  authorize(["admin", "author"]),
+  isOwnerOrAdmin(Article), // Only owner or admin can edit
+  updateArticle
+);
 
+router.delete("/:id", 
+  authenticate, 
+  authorize(["admin", "author"]),
+  isOwnerOrAdmin(Article), // Only owner or admin can delete
+  deleteArticle
+);
 
-router.put("/update/:id", authenticate, updateArticle);
+router.patch("/:id/publish", 
+  authenticate, 
+  authorize(["admin"]), // Only admin can publish/unpublish
+  togglePublish
+);
 
-
-router.delete("/delete/:id", authenticate, deleteArticle);
-
-
-router.patch("/:id/publish", authenticate, togglePublish);
+router.get("/user/:userId/articles", 
+  authenticate, 
+  authorize(["admin", "author"]), 
+  getArticlesByUser
+);
 
 export default router;
 
