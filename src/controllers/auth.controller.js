@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.models.js";
 import ApiError from "../utils/ApiError.js";
+import { sendEmail } from "../utils/emailSender.js";
+import crypto from "crypto"
 
 // Function to check if token is expired
 const isTokenExpired = (token) => {
@@ -159,8 +161,8 @@ const refreshAccessToken = async (req, res, next) => {
 };
 
 
-import crypto from "crypto"
-import sendEmail from "../utils/emailSender.js";
+
+
 
 const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
