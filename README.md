@@ -3,8 +3,10 @@
 BlogApp is a web application that allows users to create, read, update, and delete articles while managing user roles and authentication. It supports features like user registration, login, JWT-based authentication, role-based access, and additional functionalities like password reset using email.
 
 ## Live Server
+
+You can test the endpoints on the below server link
  ```bash
-`https://blog-app-ejan.onrender.com`
+https://blog-app-ejan.onrender.com
  ```
 
 ## Features
