@@ -1,7 +1,7 @@
 import express from "express";
 import { createArticle, updateArticle, getArticle, getAllArticles, deleteArticle, togglePublish, getArticlesByUser } from "../controllers/article.controller.js";
 import { authenticate, authorize, isAdmin, isOwnerOrAdmin } from "../middlewares/auth.middleware.js";
-import Article from "../models/article.model.js"; // Make sure to import your Article model
+import { Article } from "../models/article.models.js";
 
 const router = express.Router();
 
